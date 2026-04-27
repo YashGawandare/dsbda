@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const predictionSchema = new mongoose.Schema({
+  city: { type: String, required: false },
   pm25: { type: Number, required: true },
   pm10: { type: Number, required: true },
   temperature: { type: Number, required: true },

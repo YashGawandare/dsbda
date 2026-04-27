@@ -7,7 +7,7 @@ require('dotenv').config();
 const Prediction = require('./models/Prediction');
 
 const app = express();
-const PORT = process.env.PORT || 5001;
+const PORT = 5001;
 const ML_API_URL = 'http://127.0.0.1:5000/predict';
 const MONGO_URI = 'mongodb://127.0.0.1:27017/aqi_db';
 
@@ -23,7 +23,18 @@ mongoose.connect(MONGO_URI)
 // API Route for prediction
 app.post('/api/predict', async (req, res) => {
   try {
-    const { pm25, pm10, temperature } = req.body;
+    const { city, pm25, pm10, temperature } = req.body;
+
+    // Input validation
+    if (temperature < -50 || temperature > 60) {
+      return res.status(400).json({ error: 'Invalid temperature value. Must be between -50°C and 60°C.' });
+    }
+    if (pm25 < 0 || pm25 > 2000) {
+      return res.status(400).json({ error: 'Invalid PM2.5 value. Must be between 0 and 2000.' });
+    }
+    if (pm10 < 0 || pm10 > 2000) {
+      return res.status(400).json({ error: 'Invalid PM10 value. Must be between 0 and 2000.' });
+    }
 
     // Send data to ML model (Flask API)
     const mlResponse = await axios.post(ML_API_URL, {
@@ -36,16 +47,17 @@ app.post('/api/predict', async (req, res) => {
 
     // Save prediction to MongoDB
     const newPrediction = new Prediction({
+      city,
       pm25,
       pm10,
       temperature,
       aqi,
       category
     });
-    
+
     await newPrediction.save();
 
-    res.status(200).json({ aqi, category, prediction: newPrediction });
+    res.status(200).json({ city, aqi, category, prediction: newPrediction });
   } catch (error) {
     console.error('Error in prediction API:', error.message);
     res.status(500).json({ error: 'Failed to process prediction' });
@@ -59,6 +71,27 @@ app.get('/api/history', async (req, res) => {
     res.status(200).json(history);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch history' });
+  }
+});
+
+// API Route to clear history
+app.delete('/api/history', async (req, res) => {
+  try {
+    await Prediction.deleteMany({});
+    res.status(200).json({ message: 'History cleared successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to clear history' });
+  }
+});
+
+// API Route for fetching model metrics
+app.get('/api/metrics', async (req, res) => {
+  try {
+    const metricsResponse = await axios.get('http://127.0.0.1:5000/metrics');
+    res.status(200).json(metricsResponse.data);
+  } catch (error) {
+    console.error('Error fetching metrics:', error.message);
+    res.status(500).json({ error: 'Failed to fetch model metrics' });
   }
 });
 

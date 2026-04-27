@@ -3,12 +3,13 @@ import axios from 'axios';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Legend
 } from 'recharts';
-import { Cloud, Wind, Thermometer, AlertTriangle, CheckCircle, Activity, Loader2 } from 'lucide-react';
+import { Cloud, Wind, Thermometer, AlertTriangle, CheckCircle, Activity, Loader2, MapPin, Database, Trash2 } from 'lucide-react';
 
 const API_BASE_URL = 'http://localhost:5001/api';
 
 function App() {
   const [formData, setFormData] = useState({
+    city: '',
     pm25: '',
     pm10: '',
     temperature: ''
@@ -16,11 +17,13 @@ function App() {
   
   const [prediction, setPrediction] = useState(null);
   const [history, setHistory] = useState([]);
+  const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchHistory();
+    fetchMetrics();
   }, []);
 
   const fetchHistory = async () => {
@@ -29,6 +32,28 @@ function App() {
       setHistory(response.data);
     } catch (err) {
       console.error('Failed to fetch history:', err);
+    }
+  };
+
+  const fetchMetrics = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/metrics`);
+      setMetrics(response.data);
+    } catch (err) {
+      console.error('Failed to fetch metrics:', err);
+    }
+  };
+
+  const handleClearHistory = async () => {
+    if (!window.confirm("Are you sure you want to clear all prediction history?")) return;
+    
+    try {
+      await axios.delete(`${API_BASE_URL}/history`);
+      setHistory([]);
+      setPrediction(null);
+    } catch (err) {
+      console.error('Failed to clear history:', err);
+      alert('Failed to clear history');
     }
   };
 
@@ -48,6 +73,7 @@ function App() {
     
     try {
       const response = await axios.post(`${API_BASE_URL}/predict`, {
+        city: formData.city,
         pm25: Number(formData.pm25),
         pm10: Number(formData.pm10),
         temperature: Number(formData.temperature)
@@ -105,7 +131,8 @@ function App() {
     aqi: item.aqi,
     pm25: item.pm25,
     pm10: item.pm10,
-    temp: item.temperature
+    temp: item.temperature,
+    city: item.city
   }));
 
   return (
@@ -143,6 +170,24 @@ function App() {
               
               <form onSubmit={handleSubmit} className="p-6 space-y-5">
                 <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">City</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <MapPin className="h-5 w-5 text-slate-400" />
+                    </div>
+                    <input
+                      type="text"
+                      name="city"
+                      required
+                      value={formData.city}
+                      onChange={handleInputChange}
+                      className="pl-10 block w-full border-slate-300 rounded-lg shadow-sm focus:ring-teal-500 focus:border-teal-500 sm:text-sm border py-2.5 transition-colors"
+                      placeholder="e.g. New York"
+                    />
+                  </div>
+                </div>
+                
+                <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">PM2.5 (µg/m³)</label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -151,6 +196,8 @@ function App() {
                     <input
                       type="number"
                       step="0.01"
+                      min="0"
+                      max="2000"
                       name="pm25"
                       required
                       value={formData.pm25}
@@ -170,6 +217,8 @@ function App() {
                     <input
                       type="number"
                       step="0.01"
+                      min="0"
+                      max="2000"
                       name="pm10"
                       required
                       value={formData.pm10}
@@ -189,6 +238,8 @@ function App() {
                     <input
                       type="number"
                       step="0.1"
+                      min="-50"
+                      max="60"
                       name="temperature"
                       required
                       value={formData.temperature}
@@ -235,7 +286,7 @@ function App() {
               <div className="bg-white rounded-2xl shadow-xl overflow-hidden h-full flex flex-col relative border border-slate-100">
                 <div className={`h-3 w-full ${getAqiBgColor(prediction.aqi)}`}></div>
                 <div className="p-8 flex-1 flex flex-col items-center justify-center text-center">
-                  <h3 className="text-xl font-medium text-slate-500 mb-2">Predicted Air Quality Index</h3>
+                  <h3 className="text-xl font-medium text-slate-500 mb-2">Predicted Air Quality for {prediction.city}</h3>
                   
                   <div className={`text-7xl font-bold tracking-tighter my-4 ${getAqiColor(prediction.aqi)}`}>
                     {prediction.aqi}
@@ -266,12 +317,99 @@ function App() {
           </div>
         </div>
 
+        {/* Model Metrics Card */}
+        {metrics && (
+          <div className="bg-slate-800 rounded-2xl shadow-xl overflow-hidden border border-slate-700 text-white mt-8">
+             <div className="bg-slate-900 border-b border-slate-700 px-6 py-4">
+               <h2 className="text-lg font-semibold flex items-center">
+                 <Database className="w-5 h-5 mr-2 text-teal-400" />
+                 Model Accuracy & Metrics
+               </h2>
+             </div>
+             <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                  <h3 className="text-teal-400 font-medium mb-3 text-sm uppercase tracking-wide">Linear Regression</h3>
+                  <div className="space-y-2 text-sm text-slate-300">
+                    <div className="flex justify-between"><span className="text-slate-400">RMSE:</span> <span className="font-mono">{metrics.linear_regression.rmse.toFixed(4)}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-400">MAE:</span> <span className="font-mono">{metrics.linear_regression.mae.toFixed(4)}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-400">R² Score:</span> <span className="font-mono">{(metrics.linear_regression.r2 * 100).toFixed(2)}%</span></div>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-teal-400 font-medium mb-3 text-sm uppercase tracking-wide">Random Forest</h3>
+                  <div className="space-y-2 text-sm text-slate-300">
+                    <div className="flex justify-between"><span className="text-slate-400">RMSE:</span> <span className="font-mono">{metrics.random_forest.rmse.toFixed(4)}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-400">MAE:</span> <span className="font-mono">{metrics.random_forest.mae.toFixed(4)}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-400">R² Score:</span> <span className="font-mono">{(metrics.random_forest.r2 * 100).toFixed(2)}%</span></div>
+                  </div>
+                </div>
+             </div>
+             <div className="bg-slate-900/50 px-6 py-3 border-t border-slate-700 text-sm">
+               <span className="text-slate-400">Best Selected Model: </span> 
+               <span className="text-teal-400 font-semibold">{metrics.best_model}</span>
+             </div>
+          </div>
+        )}
+
+        {/* Correlation Matrix */}
+        {metrics?.correlation_matrix && (
+          <div className="bg-slate-800 rounded-2xl shadow-xl overflow-hidden border border-slate-700 text-white mt-8">
+             <div className="bg-slate-900 border-b border-slate-700 px-6 py-4">
+               <h2 className="text-lg font-semibold flex items-center">
+                 <Activity className="w-5 h-5 mr-2 text-teal-400" />
+                 Feature Correlation Matrix
+               </h2>
+             </div>
+             <div className="p-6 overflow-x-auto">
+               <table className="w-full text-sm text-left text-slate-300">
+                 <thead className="text-xs text-teal-400 uppercase bg-slate-900/50">
+                   <tr>
+                     <th className="px-6 py-3 rounded-tl-lg">Feature</th>
+                     {Object.keys(metrics.correlation_matrix).map(key => (
+                       <th key={key} className="px-6 py-3">{key}</th>
+                     ))}
+                   </tr>
+                 </thead>
+                 <tbody>
+                   {Object.entries(metrics.correlation_matrix).map(([rowKey, rowData], idx, arr) => (
+                     <tr key={rowKey} className={`border-slate-700 hover:bg-slate-700/50 transition-colors ${idx !== arr.length - 1 ? 'border-b' : ''}`}>
+                       <td className="px-6 py-4 font-medium text-white">{rowKey}</td>
+                       {Object.keys(metrics.correlation_matrix).map(colKey => {
+                         const val = rowData[colKey];
+                         const isHigh = Math.abs(val) >= 0.7 && Math.abs(val) < 1.0;
+                         const isSelf = Math.abs(val) === 1.0;
+                         const color = isSelf ? 'text-slate-500' : isHigh ? (val > 0 ? 'text-rose-400 font-semibold' : 'text-teal-400 font-semibold') : 'text-slate-300';
+                         return (
+                           <td key={colKey} className={`px-6 py-4 ${color}`}>
+                             {val.toFixed(4)}
+                           </td>
+                         );
+                       })}
+                     </tr>
+                   ))}
+                 </tbody>
+               </table>
+             </div>
+          </div>
+        )}
+
         {/* Charts Section */}
         {chartData.length > 0 && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="bg-white p-6 rounded-2xl shadow-xl border border-slate-100">
-              <h3 className="text-lg font-semibold text-slate-800 mb-6">AQI Trend</h3>
-              <div className="h-72 w-full">
+          <div className="mt-8">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-slate-800">Historical Trends</h2>
+              <button 
+                onClick={handleClearHistory}
+                className="flex items-center text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-lg transition-colors"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Clear History
+              </button>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="bg-white p-6 rounded-2xl shadow-xl border border-slate-100">
+                <h3 className="text-lg font-semibold text-slate-800 mb-6">AQI Trend</h3>
+                <div className="h-72 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
@@ -279,6 +417,7 @@ function App() {
                     <YAxis tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} />
                     <RechartsTooltip 
                       contentStyle={{ borderRadius: '0.5rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                      labelFormatter={(label, payload) => payload?.[0]?.payload?.city ? `${payload[0].payload.city} (${label})` : label}
                     />
                     <Line type="monotone" dataKey="aqi" stroke="#0d9488" strokeWidth={3} dot={{r: 4, fill: '#0d9488', strokeWidth: 2, stroke: '#fff'}} activeDot={{ r: 6 }} />
                   </LineChart>
@@ -297,6 +436,7 @@ function App() {
                     <RechartsTooltip 
                       contentStyle={{ borderRadius: '0.5rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                       cursor={{fill: '#f1f5f9'}}
+                      labelFormatter={(label, payload) => payload?.[0]?.payload?.city ? `${payload[0].payload.city} (${label})` : label}
                     />
                     <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }}/>
                     <Bar dataKey="pm25" name="PM 2.5" fill="#3b82f6" radius={[4, 4, 0, 0]} />
@@ -306,6 +446,7 @@ function App() {
                 </ResponsiveContainer>
               </div>
             </div>
+          </div>
           </div>
         )}
       </main>

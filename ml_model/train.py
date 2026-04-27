@@ -55,6 +55,25 @@ else:
     best_model = lr_model
     print("\nLinear Regression is the better model. Saving...")
 
+import json
+metrics = {
+    'linear_regression': {
+        'rmse': lr_rmse,
+        'mae': lr_mae,
+        'r2': lr_r2
+    },
+    'random_forest': {
+        'rmse': rf_rmse,
+        'mae': rf_mae,
+        'r2': rf_r2
+    },
+    'best_model': 'Random Forest' if rf_r2 > lr_r2 else 'Linear Regression',
+    'correlation_matrix': df[features + [target]].corr().to_dict()
+}
+with open('metrics.json', 'w') as f:
+    json.dump(metrics, f)
+
 model_filename = 'model.joblib'
 joblib.dump(best_model, model_filename)
 print(f"Model saved to {model_filename} successfully!")
+

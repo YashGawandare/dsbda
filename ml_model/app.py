@@ -59,5 +59,14 @@ def predict():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
+@app.route('/metrics', methods=['GET'])
+def get_metrics():
+    metrics_path = 'metrics.json'
+    if os.path.exists(metrics_path):
+        import json
+        with open(metrics_path, 'r') as f:
+            return jsonify(json.load(f))
+    return jsonify({'error': 'Metrics not found.'}), 404
+
 if __name__ == '__main__':
     app.run(port=5000, debug=True)
