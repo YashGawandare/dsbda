@@ -5,7 +5,7 @@ import os
 
 app = Flask(__name__)
 
-# Load model
+# Load model and added the model path
 model_path = 'model.joblib'
 if os.path.exists(model_path):
     model = joblib.load(model_path)
