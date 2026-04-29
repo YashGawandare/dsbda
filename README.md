@@ -130,6 +130,11 @@ Open the Vite app in the browser using the URL shown in the terminal.
 - Backend configuration values are currently hardcoded in `backend/server.js`.
 - Use TSV or JSON requests with fields `city`, `pm25`, `pm10`, and `temperature` when calling the backend prediction endpoint.
 
+##Output Screenshots :
+
+<img width="1352" height="637" alt="WhatsApp Image 2026-04-27 at 4 08 34 PM" src="https://github.com/user-attachments/assets/83782574-d052-48af-91d7-f0c979fd1d7e" />
+<img width="1352" height="637" alt="WhatsApp Image 2026-04-27 at 4 08 34 PM" src="https://github.com/user-attachments/assets/f1bc0699-9224-49ef-8d9d-eed696a96c13" />
+
 ## Future Improvements
 
 - Add environment variable support for service URLs and MongoDB connection strings
