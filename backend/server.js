@@ -5,6 +5,7 @@ const axios = require('axios');
 require('dotenv').config();
 
 const Prediction = require('./models/Prediction');
+// created express object
 
 const app = express();
 const PORT = 5001;
