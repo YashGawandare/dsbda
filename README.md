@@ -1,6 +1,6 @@
 # Air Quality Prediction Dashboard
 
-A full-stack air quality prediction project built with:
+It is a full-stack air quality prediction project built with:
 - **Frontend:** React + Vite + Tailwind CSS
 - **Backend:** Node.js + Express + MongoDB
 - **Machine Learning:** Python + scikit-learn + Flask
